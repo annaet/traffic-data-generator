@@ -118,6 +118,10 @@ function beginRequestingActiveFiles() {
               }
 
               logger.info('created ' + filename)
+
+              if (endpoint.name === 'traffic_cameras') {
+                getJamCams(body, date, now)
+              }
             })
           }
 
@@ -143,6 +147,39 @@ function beginRequestingActiveFiles() {
       setInterval(() => request(options, callback), timeout)
     }
   })
+}
+
+function getJamCams(body, date, now) {
+  logger.info('attempting to download image from JamCams')
+  let json = JSON.parse(body)
+  for (let cam of json) {
+    for (let prop of cam.additionalProperties) {
+      if (prop.key === 'imageUrl') {
+        let imageUrl = prop.value
+
+        let options = {
+          url: imageUrl,
+          method: 'GET'
+        }
+
+        let imgDir = 'data/img/' + date + '/' + now
+        mkdirp(imgDir, (err) => {
+          if (err) {
+            return logger.error(err)
+          }
+
+          request(options, (err) => {
+            if (err) {
+              return logger.error(err)
+            }
+
+          }).pipe(fs.createWriteStream(imgDir + '/' + cam.id + '.jpg'))
+        })
+
+        break
+      }
+    }
+  }
 }
 
 createFileStructure((err) => {
