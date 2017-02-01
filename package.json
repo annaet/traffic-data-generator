@@ -1,0 +1,21 @@
+{
+  "name": "traffic-data",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Collection utility for the TFL Unified API",
+  "repository": "https://github.com/annaet/traffic-data",
+  "license": "MIT",
+  "scripts": {
+    "prestart": "npm install",
+    "start": "node ./app.js",
+    "pretest": "npm install",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "cfenv": "1.0.x",
+    "express": "^4.14.0",
+    "mkdirp": "^0.5.1",
+    "request": "^2.79.0",
+    "winston": "^2.3.1"
+  }
+}

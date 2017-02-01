@@ -1,0 +1,41 @@
+{
+  "credentials": {
+    "id": "02b59573",
+    "key": "65d1a8e908b13383f8323f3fde7efb64"
+  },
+  "api": "https://api.tfl.gov.uk",
+  "active_endpoints": [
+    {
+      "name": "air_quality",
+      "route": "/AirQuality",
+      "method": "GET",
+      "frequency": "60"
+    }, {
+      "name": "road_status",
+      "route": "/Road/all/Status",
+      "method": "GET",
+      "frequency": "60"
+    }, {
+      "name": "car_park_occupancy",
+      "route": "/Occupancy/CarPark",
+      "method": "GET",
+      "frequency": "5"
+    }, {
+      "name": "traffic_cameras",
+      "route": "/Place/Type/JamCam",
+      "method": "GET",
+      "frequency": "5"
+    }
+  ],
+  "static_endpoints": [
+    {
+      "name": "all_car_parks",
+      "route": "/Place/Type/CarPark",
+      "method": "GET"
+    }, {
+      "name": "roads",
+      "route": "/Road",
+      "method": "GET"
+    }
+  ]
+}
