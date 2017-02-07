@@ -150,7 +150,7 @@ function beginRequestingActiveFiles() {
 }
 
 function getJamCams(body, date, now) {
-  logger.info('attempting to download image from JamCams')
+  logger.info('attempting to download images from JamCams')
   let json = JSON.parse(body)
   for (let cam of json) {
     for (let prop of cam.additionalProperties) {

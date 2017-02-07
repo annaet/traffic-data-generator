@@ -1,7 +1,7 @@
 {
   "credentials": {
-    "id": "02b59573",
-    "key": "65d1a8e908b13383f8323f3fde7efb64"
+    "id": "tfl_id",
+    "key": "tfl_key"
   },
   "api": "https://api.tfl.gov.uk",
   "active_endpoints": [
@@ -37,5 +37,12 @@
       "route": "/Road",
       "method": "GET"
     }
-  ]
+  ],
+  "cloudant": {
+    "username": "username",
+    "password": "password",
+    "host": "host",
+    "port": "port",
+    "url": "url"
+  }
 }
