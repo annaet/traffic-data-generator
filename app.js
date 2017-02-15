@@ -6,7 +6,13 @@ const mkdirp = require('mkdirp')
 const fs = require('fs')
 const app = express()
 
+const Cloudant = require('cloudant')
 const config = require('./config')
+const cloudant = Cloudant({
+  account: config.cloudant.username,
+  password: config.cloudant.password
+})
+const db = cloudant.db.use('traffic')
 
 const logger = new (winston.Logger)({
   transports: [
@@ -19,6 +25,32 @@ function getFormattedDate() {
   let now = new Date()
   let formatted = now.getDate() + '_' + (now.getMonth() + 1) + '_' + now.getFullYear()
   return formatted
+}
+
+function getFormattedHour() {
+  let now = new Date()
+  let formatted = now.getHours()
+  return formatted
+}
+
+function saveToCloudant(name, timestamp, date, hour, active) {
+  let filename = name + '_' + timestamp
+  let document = {
+    type: name,
+    timestamp: timestamp,
+    date: date,
+    hour: hour,
+    active: active
+  }
+
+  db.insert(document, filename, function(err) {
+    if (!err) {
+      logger.info('inserted ' + filename + ' into Cloudant')
+    } else {
+      logger.error('failed to insert ' + filename + ' into Cloudant')
+      logger.error(err)
+    }
+  })
 }
 
 function createFileStructure(cb) {
@@ -45,6 +77,7 @@ function createStaticFiles() {
   logger.info('attempting to create static files')
 
   let date = getFormattedDate()
+  let hour = getFormattedHour()
   mkdirp('data/static/' + date, (err) => {
     if (err) {
       return logger.error(err)
@@ -66,14 +99,18 @@ function createStaticFiles() {
 
         if (response.statusCode === 200) {
           let now = Date.now()
-          let filename = 'data/static/' + date + '/' + endpoint.name + '_' + now + '.json'
-          fs.writeFile(filename, body, (err) => {
+          let filename = endpoint.name + '_' + now
+          let filepath = 'data/static/' + date + '/' + filename + '.json'
+
+          fs.writeFile(filepath, body, (err) => {
             if (err) {
               return logger.error(err)
             }
 
-            logger.info('created ' + filename)
+            logger.info('created ' + filepath)
           })
+
+          saveToCloudant(endpoint.name, now, date, hour, false)
         }
       }
 
@@ -87,7 +124,8 @@ function beginRequestingActiveFiles() {
   logger.info('attempting to begin requesting active files')
 
   let date = getFormattedDate()
-  mkdirp('data/active/' + date, (err) => {
+  let hour = getFormattedHour()
+  mkdirp('data/active/' + date + '/' + hour, (err) => {
     if (err) {
       return logger.error(err)
     }
@@ -109,25 +147,32 @@ function beginRequestingActiveFiles() {
         if (response.statusCode === 200) {
           let now = Date.now()
           let newDate = getFormattedDate()
+          let newHour = getFormattedHour()
 
           function writeFile() {
-            let filename = 'data/active/' + date + '/' + endpoint.name + '_' + now + '.json'
-            fs.writeFile(filename, body, (err) => {
+            let filename = endpoint.name + '_' + now
+            let filepath = 'data/active/' + date + '/' + hour + '/' + filename + '.json'
+
+            fs.writeFile(filepath, body, (err) => {
               if (err) {
                 return logger.error(err)
               }
 
-              logger.info('created ' + filename)
+              logger.info('created ' + filepath)
 
-              if (endpoint.name === 'traffic_cameras') {
-                getJamCams(body, date, now)
+              let json = JSON.parse(body)
+              if (endpoint.name === 'traffic_camera') {
+                getJamCams(json, date, hour, now)
               }
+
+              saveToCloudant(endpoint.name, now, date, hour, true)
             })
           }
 
-          if (date !== newDate) {
+          if (date !== newDate || hour !== newHour) {
             date = newDate
-            mkdirp('data/active/' + date, (err) => {
+            hour = newHour
+            mkdirp('data/active/' + date + '/' + hour, (err) => {
               if (err) {
                 return logger.error(err)
               }
@@ -149,9 +194,8 @@ function beginRequestingActiveFiles() {
   })
 }
 
-function getJamCams(body, date, now) {
+function getJamCams(json, date, hour, now) {
   logger.info('attempting to download images from JamCams')
-  let json = JSON.parse(body)
   for (let cam of json) {
     for (let prop of cam.additionalProperties) {
       if (prop.key === 'imageUrl') {
@@ -162,7 +206,7 @@ function getJamCams(body, date, now) {
           method: 'GET'
         }
 
-        let imgDir = 'data/img/' + date + '/' + now
+        let imgDir = 'data/img/' + date + '/' + hour + '/' + now
         mkdirp(imgDir, (err) => {
           if (err) {
             return logger.error(err)
@@ -182,30 +226,28 @@ function getJamCams(body, date, now) {
   }
 }
 
-createFileStructure((err) => {
-  if (err) {
-    return logger.error(err)
-  }
+app.use(function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+  next()
+})
 
-  createStaticFiles()
+var appEnv = cfenv.getAppEnv()
 
-  beginRequestingActiveFiles((err) => {
+app.listen(appEnv.port, () => {
+  logger.info('server starting on ' + appEnv.url)
+
+  createFileStructure((err) => {
     if (err) {
       return logger.error(err)
     }
+
+    createStaticFiles()
+
+    beginRequestingActiveFiles((err) => {
+      if (err) {
+        return logger.error(err)
+      }
+    })
   })
-})
-
-
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
-
-
-// get the app environment from Cloud Foundry
-var appEnv = cfenv.getAppEnv()
-
-// start server on the specified port and binding host
-app.listen(appEnv.port, () => {
-  console.log('server starting on ' + appEnv.url)
 })
