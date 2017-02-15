@@ -21,7 +21,7 @@
       "method": "GET",
       "frequency": "5"
     }, {
-      "name": "traffic_cameras",
+      "name": "traffic_camera",
       "route": "/Place/Type/JamCam",
       "method": "GET",
       "frequency": "5"
@@ -35,6 +35,10 @@
     }, {
       "name": "roads",
       "route": "/Road",
+      "method": "GET"
+    }, {
+      "name": "all_traffic_cameras",
+      "route": "/Place/Type/JamCam",
       "method": "GET"
     }
   ],
