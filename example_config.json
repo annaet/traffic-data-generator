@@ -25,6 +25,11 @@
       "route": "/Place/Type/JamCam",
       "method": "GET",
       "frequency": "5"
+    }, {
+      "name": "bike_point",
+      "route": "/bikepoint",
+      "method": "GET",
+      "frequency": "5"
     }
   ],
   "static_endpoints": [

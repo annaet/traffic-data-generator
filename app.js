@@ -1,3 +1,5 @@
+"use strict"
+
 const cfenv = require('cfenv')
 const express = require('express')
 const request = require('request')
@@ -162,7 +164,8 @@ function beginRequestingActiveFiles() {
 
               let json = JSON.parse(body)
               if (endpoint.name === 'traffic_camera') {
-                getJamCams(json, date, hour, now)
+                getJamCamsImages(json, date, hour, now)
+                getJamCamsVideos(json, date, hour, now)
               }
 
               saveToCloudant(endpoint.name, now, date, hour, true)
@@ -194,7 +197,7 @@ function beginRequestingActiveFiles() {
   })
 }
 
-function getJamCams(json, date, hour, now) {
+function getJamCamsImages(json, date, hour, now) {
   logger.info('attempting to download images from JamCams')
   for (let cam of json) {
     for (let prop of cam.additionalProperties) {
@@ -218,6 +221,38 @@ function getJamCams(json, date, hour, now) {
             }
 
           }).pipe(fs.createWriteStream(imgDir + '/' + cam.id + '.jpg'))
+        })
+
+        break
+      }
+    }
+  }
+}
+
+function getJamCamsVideos(json, date, hour, now) {
+  logger.info('attempting to download videos from JamCams')
+  for (let cam of json) {
+    for (let prop of cam.additionalProperties) {
+      if (prop.key === 'videoUrl') {
+        let videoUrl = prop.value
+
+        let options = {
+          url: videoUrl,
+          method: 'GET'
+        }
+
+        let videoDir = 'data/video/' + date + '/' + hour + '/' + now
+        mkdirp(videoDir, (err) => {
+          if (err) {
+            return logger.error(err)
+          }
+
+          request(options, (err) => {
+            if (err) {
+              return logger.error(err)
+            }
+
+          }).pipe(fs.createWriteStream(videoDir + '/' + cam.id + '.mp4'))
         })
 
         break
